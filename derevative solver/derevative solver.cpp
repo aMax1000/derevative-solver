@@ -16,41 +16,71 @@ enum MATHENUM {
 	VARIABLE,
 	OPERATION,
 };
-union math {
-	mathunit mat;
+union mathun {
+	mathunit* mat;
 	int con;
+	char var;
+};
+struct math {
+	mathun mat;
+	MATHENUM a1;
+	math(mathunit* mat1){
+		a1 = OPERATION;
+		mat.mat = mat1;
+	}
+	math(int con){
+		a1 = CONSTANT;
+		mat.con = con;
+	}
+	math(char var){
+		a1 = VARIABLE;
+		mat.var = var;
+	}
+	math* DERIVATIVETRUE() const{
+		switch (a1)
+		{
+		case CONSTANT:
+			return new math(0);
+			break;
+		case VARIABLE:
+			return new math(1);
+			break;
+		case OPERATION:
+			return mat.mat->DERIVATIVE();
+			break;
+		default:
+			break;
+		}
+	}
 };
 
+
 struct mathunit {
-    math& a;
-    math& b;
-	MATHENUM a1;
-	MATHENUM b1;
+    math* a;
+    math* b;
     OPER c;
 
-	mathunit(math& a, math& b, MATHENUM a1, MATHENUM b1, OPER c) : a(a), b(b), a1(a1), b1(b1), c(c) {}
+	mathunit(math* a, math* b, OPER c) : a(a), b(b), c(c) {}
 
 
-	mathunit& DERIVATIVE() {
-		if (a1 == OPERATION and b1== OPERATION) {
+	math* DERIVATIVE() const{
+		if (a->a1 != CONSTANT and b->a1 != CONSTANT) {
 			switch (c) {
 			case ADD:
-				return *new mathunit((math&)a.mat.DERIVATIVE(), (math&)b.mat.DERIVATIVE(),a1,b1,ADD);
+				return new math(new mathunit(a->DERIVATIVETRUE(), b->DERIVATIVETRUE(),ADD));
 			case SUB:
-				return *new mathunit((math&)a.mat.DERIVATIVE(), (math&)b.mat.DERIVATIVE(), a1, b1, ADD);
+				return new math(new mathunit(a->DERIVATIVETRUE(), b->DERIVATIVETRUE(), SUB));
 			case MUL:
-				return *new mathunit(
-					(math&)*(new mathunit((math&)a.mat.DERIVATIVE(), (math&)b.mat, a1, b1, MUL)),
-					(math&)*(new mathunit((math&)a.mat, (math&)b.mat.DERIVATIVE(), a1, b1, MUL)),
-					OPERATION, OPERATION, ADD);
+				return new math(new mathunit(
+							new math(new mathunit(a->DERIVATIVETRUE(), b, MUL)), 
+							new math(new mathunit(a, b->DERIVATIVETRUE(), MUL))
+					,ADD));
 			case DIV:
-				return *new mathunit(
-					(math&)*new mathunit(
-					(math&)*(new mathunit((math&)a.mat.DERIVATIVE(), (math&)b.mat, a1, b1, MUL)),
-					(math&)*(new mathunit((math&)a.mat, (math&)b.mat.DERIVATIVE(), a1, b1, MUL)),
-					OPERATION, OPERATION, SUB), (math&)*(new mathunit((math&)b.mat, (math&)b.mat,b1,b1,MUL)),
-					OPERATION, OPERATION, DIV
-					);
+				return new math(new mathunit(
+						new math(new mathunit(
+							new math(new mathunit(a->DERIVATIVETRUE(), b, MUL)),
+							new math(new mathunit(a, b->DERIVATIVETRUE(), MUL)), SUB)), 
+						new math(new mathunit(b,b,MUL)),DIV));
 			}
 		}
 	}
